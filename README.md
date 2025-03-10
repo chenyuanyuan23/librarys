@@ -4,7 +4,7 @@
   1.LiteAVSDK_Player目录下 -> 
   2.版本号目录 ->
   3.放入 LiteAVSDK_Player arr -> 
-  4.拷贝一个pom pom跟arr同名 LiteAVSDK_Playe_{版本号}.{arr|pom} ->
+  4.拷贝一个pom pom跟arr同名 LiteAVSDK_Playe-{版本号}.{arr|pom} ->
   5.修改 pom内的版本号
   6.如何使用
     dependencies {
