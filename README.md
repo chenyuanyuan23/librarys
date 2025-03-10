@@ -13,9 +13,8 @@
 
   ios:
   1.frameworks目录下 -> 
-  2.LiteAVSDK_Player_iOS_{版本号}目录下 放需要的.xcframework ->
-  3.压缩LiteAVSDK_Player_iOS_{版本号}.zip 提交到git
-  4.如何使用
+  2.需要的.xcframework 压缩成 LiteAVSDK_Player_iOS_{版本号}.zip 直接选中所有xcframework压缩不要带目录  提交到git
+  3.如何使用
     搜索LiteAVSDK_Player_iOS 替换相关zip名称
 
 
