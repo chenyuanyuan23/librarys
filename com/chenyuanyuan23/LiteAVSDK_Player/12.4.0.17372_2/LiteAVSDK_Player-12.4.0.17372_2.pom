@@ -4,6 +4,6 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.chenyuanyuan23</groupId>
   <artifactId>LiteAVSDK_Player</artifactId>
-  <version>12.4.0.17372</version>
+  <version>12.4.0.17372_2</version>
   <packaging>aar</packaging>
 </project>
