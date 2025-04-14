@@ -1,5 +1,10 @@
 # repo 22
 ## LiteAVSDK_Player 新包上传说明
+  给过来的sdk如
+  LiteAVSDK_Player_Android_12.4.0.17372.zip
+  LiteAVSDK_Player_iOS_12.4.0.17856.zip
+  放到tools目录下执行build_liteavsdk.sh脚本即可完成“如何使用”之前的步骤
+
   android: 
   1.LiteAVSDK_Player目录下 -> 
   2.版本号目录 ->
