@@ -13,6 +13,9 @@ mkdir -p "$script_dir/temp_unzips"
 # 创建 LiteAVSDK_Player 目录
 mkdir -p "$parent_dir/LiteAVSDK_Player"
 
+# 创建 frameworks 目录
+mkdir -p "$parent_dir/frameworks"
+
 # 遍历脚本所在目录下的所有 zip 文件
 for zip_file in "$script_dir"/*.zip; do
   if [ -f "$zip_file" ]; then
@@ -35,7 +38,7 @@ for zip_file in "$script_dir"/*.zip; do
         output_dir="$parent_dir/LiteAVSDK_Player/$version"
         mkdir -p "$output_dir"
 
-        # 拷贝 .aar 文件并修改名称
+        # 拷贝 .aar 文件并生成同名的 .pom 文件
         aar_file=$(find "$script_dir/temp_unzips" -name "*.aar" | head -n 1)
 
         if [ -f "$aar_file" ]; then
@@ -43,7 +46,6 @@ for zip_file in "$script_dir"/*.zip; do
           cp "$aar_file" "$output_dir/$new_aar_name"
           echo "拷贝 $aar_file 到 $output_dir/$new_aar_name 成功！"
 
-          # 生成同名的 .pom 文件
           pom_file="$output_dir/LiteAVSDK_Player-$version.pom"
           cat <<EOF > "$pom_file"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -56,14 +58,31 @@ for zip_file in "$script_dir"/*.zip; do
   <packaging>aar</packaging>
 </project>
 EOF
-          # 移除末尾空行
-          head -n -1 "$pom_file" > "${pom_file}.tmp" && mv "${pom_file}.tmp" "$pom_file"
+
           echo "生成 $pom_file 文件成功！"
         else
           echo "未找到解压后的 .aar 文件！"
         fi
       else
         echo "无法从 $zip_file 中提取版本号！"
+      fi
+    fi
+
+    # 检查 zip 文件名是否以 LiteAVSDK_Player_iOS_ 开头
+    if [[ "$zip_file" == *LiteAVSDK_Player_iOS_* ]]; then
+       # 提取文件名（不包含扩展名）
+      filename=$(basename "$zip_file" .zip)
+
+      # 压缩 xcframework 目录
+      zip_output_file="$parent_dir/frameworks/$filename.zip"
+      unzipped_dir="$script_dir/temp_unzips/$filename"
+      pushd "$unzipped_dir/SDK" > /dev/null
+      zip -ro "$zip_output_file" TXFFmpeg.xcframework/ TXLiteAVSDK_Player.xcframework/ TXSoundTouch.xcframework/
+      popd > /dev/null
+      if [ $? -eq 0 ]; then
+        echo "压缩 $zip_output_file 文件成功！"
+      else
+        echo "压缩 $zip_output_file 文件失败！"
       fi
     fi
   fi
