@@ -21,7 +21,7 @@ for zip_file in "$script_dir"/*.zip; do
   if [ -f "$zip_file" ]; then
     # 解压到 temp_unzips 目录（所有 zip 文件都解压到这里）
     echo "解压 $zip_file 到 $script_dir/temp_unzips 目录..."
-    unzip "$zip_file" -d "$script_dir/temp_unzips"
+    ditto -x -k "$zip_file" "$script_dir/temp_unzips"
     if [ $? -eq 0 ]; then
       echo "$zip_file 解压到 temp_unzips 目录成功！"
     else
