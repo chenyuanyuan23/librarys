@@ -73,9 +73,13 @@ EOF
        # 提取文件名（不包含扩展名）
       filename=$(basename "$zip_file" .zip)
 
-      # 压缩 xcframework 目录
-      zip_output_file="$parent_dir/frameworks/$filename.zip"
+      # 提取版本号（用于 SPM 子目录命名）
+      ios_version=$(echo "$zip_file" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
+
       unzipped_dir="$script_dir/temp_unzips/$filename"
+
+      # ─── 原有：合包 zip（CocoaPods 模式用，podspec 的 prepare_command 会下载这个） ───
+      zip_output_file="$parent_dir/frameworks/$filename.zip"
       pushd "$unzipped_dir/SDK" > /dev/null
       zip -ro "$zip_output_file" TXFFmpeg.xcframework/ TXLiteAVSDK_Player.xcframework/ TXSoundTouch.xcframework/
       popd > /dev/null
@@ -83,6 +87,70 @@ EOF
         echo "压缩 $zip_output_file 文件成功！"
       else
         echo "压缩 $zip_output_file 文件失败！"
+      fi
+
+      # ─── 新增：SPM 模式产物（独立 xcframework zip + GitHub release） ───
+      if [ -n "$ios_version" ]; then
+        spm_dir="$parent_dir/frameworks/spm/$ios_version"
+        mkdir -p "$spm_dir"
+
+        # 分别打 3 个独立 xcframework zip（SPM binaryTarget 要求 zip 内只有单个 xcframework）
+        echo "→ 生成 SPM 独立 xcframework zip 到 $spm_dir/"
+        pushd "$unzipped_dir/SDK" > /dev/null
+        for fw in TXFFmpeg TXLiteAVSDK_Player TXSoundTouch; do
+          rm -f "$spm_dir/${fw}.xcframework.zip"
+          zip -ro "$spm_dir/${fw}.xcframework.zip" "${fw}.xcframework/" > /dev/null
+        done
+        popd > /dev/null
+
+        # 计算 SPM sha256 checksum
+        checksum_file="$spm_dir/checksums.txt"
+        : > "$checksum_file"
+        for fw in TXFFmpeg TXLiteAVSDK_Player TXSoundTouch; do
+          sum=$(shasum -a 256 "$spm_dir/${fw}.xcframework.zip" | awk '{print $1}')
+          printf "%-40s %s\n" "${fw}.xcframework.zip" "$sum" >> "$checksum_file"
+        done
+        echo "→ checksums:"
+        cat "$checksum_file"
+
+        # 上传到 GitHub release，tag 自动避让已存在版本（同版本重打 → 加 -r2/-r3 后缀）
+        if ! command -v gh > /dev/null 2>&1; then
+          echo "⚠️  未检测到 gh CLI，跳过 release 上传。装好后可手动："
+          echo "    gh release create <tag> --repo chenyuanyuan23/librarys $spm_dir/*.xcframework.zip"
+        else
+          base_tag="$filename"  # e.g. LiteAVSDK_Player_iOS_13.1.0.20454
+          release_tag="$base_tag"
+          rev=1
+          while gh release view "$release_tag" --repo chenyuanyuan23/librarys >/dev/null 2>&1; do
+            rev=$((rev + 1))
+            release_tag="${base_tag}-r${rev}"
+          done
+          echo "→ 使用 release tag: $release_tag"
+
+          gh release create "$release_tag" \
+            --repo chenyuanyuan23/librarys \
+            --title "TXLiteAVSDK Player iOS $ios_version (SPM, ${release_tag##*-})" \
+            --notes "SPM-compatible xcframeworks for super_player.
+
+Checksums:
+$(cat "$checksum_file")" \
+            "$spm_dir/TXFFmpeg.xcframework.zip" \
+            "$spm_dir/TXLiteAVSDK_Player.xcframework.zip" \
+            "$spm_dir/TXSoundTouch.xcframework.zip"
+
+          echo ""
+          echo "→ super_player 的 Package.swift 用以下 url + checksum："
+          for fw in TXFFmpeg TXLiteAVSDK_Player TXSoundTouch; do
+            sum=$(shasum -a 256 "$spm_dir/${fw}.xcframework.zip" | awk '{print $1}')
+            cat <<EOF
+        .binaryTarget(
+            name: "${fw}",
+            url: "https://github.com/chenyuanyuan23/librarys/releases/download/${release_tag}/${fw}.xcframework.zip",
+            checksum: "${sum}"
+        ),
+EOF
+          done
+        fi
       fi
     fi
   fi

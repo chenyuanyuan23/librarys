@@ -1,0 +1,8 @@
+# SPM 发版产物（独立 xcframework zip + checksums），通过 GitHub release 分发
+com/chenyuanyuan23/frameworks/spm/
+
+# 脚本临时解压目录
+com/chenyuanyuan23/tools/temp_unzips/
+
+# macOS
+.DS_Store
