@@ -150,6 +150,57 @@ $(cat "$checksum_file")" \
         ),
 EOF
           done
+
+          # 自动更新 super_player/Package.swift 的 url + checksum, 免去手动 copy-paste
+          # 默认路径: librarys 与 tx_video_player 平级放在 插件/ 下
+          # parent_dir = 插件/librarys/com/chenyuanyuan23, 上 3 层到 插件/
+          package_swift_default="$parent_dir/../../../tx_video_player/ios/super_player/Package.swift"
+          package_swift="${SUPER_PLAYER_PACKAGE_SWIFT:-$package_swift_default}"
+          if [ -f "$package_swift" ]; then
+            echo ""
+            echo "→ 自动更新 $package_swift"
+            python3 - "$package_swift" "$release_tag" "$spm_dir" <<'PY'
+import sys, re, hashlib, pathlib
+pkg_path, tag, spm_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+spm = pathlib.Path(spm_dir)
+pkg = pathlib.Path(pkg_path)
+
+def sha256(p):
+    h = hashlib.sha256()
+    h.update(p.read_bytes())
+    return h.hexdigest()
+
+content = pkg.read_text()
+for fw in ("TXFFmpeg", "TXLiteAVSDK_Player", "TXSoundTouch"):
+    sum_ = sha256(spm / f"{fw}.xcframework.zip")
+    new_url = (
+        f"https://github.com/chenyuanyuan23/librarys/releases/download/"
+        f"{tag}/{fw}.xcframework.zip"
+    )
+    pat = re.compile(
+        r'(\.binaryTarget\(\s*name:\s*"' + re.escape(fw) + r'",\s*url:\s*")'
+        r'[^"]+'
+        r'(",\s*checksum:\s*")'
+        r'[^"]+'
+        r'(")',
+        re.S,
+    )
+    content, n = pat.subn(
+        lambda m: m.group(1) + new_url + m.group(2) + sum_ + m.group(3),
+        content,
+    )
+    if n:
+        print(f"  ✓ {fw}  checksum={sum_[:12]}…  ({n} 处替换)")
+    else:
+        print(f"  ⚠ {fw}  未找到匹配的 binaryTarget 块, 手动检查")
+pkg.write_text(content)
+PY
+          else
+            echo ""
+            echo "ℹ️  未找到 super_player/Package.swift, 跳过自动写入. 路径搜索:"
+            echo "    $package_swift"
+            echo "    可设置 SUPER_PLAYER_PACKAGE_SWIFT 环境变量指向正确路径再跑."
+          fi
         fi
       fi
     fi
